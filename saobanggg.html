@@ -20,16 +20,28 @@
 <script>
 const canvas = document.getElementById("starCanvas");
 const ctx = canvas.getContext("2d");
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
-const W = canvas.width;
-const H = canvas.height;
+let W = canvas.width = window.innerWidth;
+let H = canvas.height = window.innerHeight;
 
 let stars = [];
 let meteors = [];
+let backgroundStars = [];
 
+// Tạo nền sao tĩnh
+function createBackgroundStars(count) {
+    for (let i = 0; i < count; i++) {
+        backgroundStars.push({
+            x: Math.random() * W,
+            y: Math.random() * H,
+            r: Math.random() * 1.2,
+            alpha: Math.random()
+        });
+    }
+}
+
+// Tạo sao từ chữ
 function createStarsFromText(text) {
+    stars = [];
     let tempCanvas = document.createElement("canvas");
     let tempCtx = tempCanvas.getContext("2d");
     tempCanvas.width = W;
@@ -41,38 +53,51 @@ function createStarsFromText(text) {
     tempCtx.fillText(text, W/2, H/2);
 
     let imageData = tempCtx.getImageData(0, 0, W, H).data;
-    for (let y = 0; y < H; y += 4) {
-        for (let x = 0; x < W; x += 4) {
+    for (let y = 0; y < H; y += 3) {
+        for (let x = 0; x < W; x += 3) {
             let index = (y * W + x) * 4;
             if (imageData[index + 3] > 128) {
                 stars.push({
                     x: x,
                     y: y,
-                    size: Math.random() * 1.5,
-                    brightness: Math.random()
+                    size: Math.random() * 1.5 + 0.5,
+                    phase: Math.random() * Math.PI * 2
                 });
             }
         }
     }
 }
 
+// Tạo sao băng với đuôi gradient
 function createMeteor() {
     return {
         x: Math.random() * W,
-        y: -20,
-        length: Math.random() * 80 + 50,
-        speed: Math.random() * 10 + 6,
+        y: -50,
+        length: Math.random() * 120 + 80,
+        speed: Math.random() * 8 + 5,
         angle: Math.PI / 4,
-        opacity: Math.random() * 0.5 + 0.5
+        alpha: 1
     };
 }
 
-function drawStars() {
-    ctx.fillStyle = "black";
-    ctx.fillRect(0, 0, W, H);
+function drawBackgroundStars() {
+    ctx.save();
+    ctx.globalAlpha = 0.8;
     ctx.fillStyle = "white";
+    backgroundStars.forEach(s => {
+        ctx.globalAlpha = 0.4 + 0.6 * Math.sin(Date.now() / 1000 + s.alpha * 10);
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    ctx.restore();
+}
+
+function drawTextStars() {
     stars.forEach(s => {
-        ctx.globalAlpha = 0.5 + 0.5 * Math.sin(Date.now() / 300 + s.brightness * 10);
+        let twinkle = 0.5 + 0.5 * Math.sin(Date.now() / 500 + s.phase);
+        ctx.globalAlpha = twinkle;
+        ctx.fillStyle = "white";
         ctx.beginPath();
         ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
         ctx.fill();
@@ -81,39 +106,58 @@ function drawStars() {
 }
 
 function drawMeteors() {
-    meteors.forEach((m, index) => {
-        ctx.strokeStyle = `rgba(255,255,255,${m.opacity})`;
+    meteors.forEach((m, i) => {
+        const x2 = m.x - Math.cos(m.angle) * m.length;
+        const y2 = m.y - Math.sin(m.angle) * m.length;
+        let grad = ctx.createLinearGradient(m.x, m.y, x2, y2);
+        grad.addColorStop(0, `rgba(255,255,255,${m.alpha})`);
+        grad.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.strokeStyle = grad;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(m.x, m.y);
-        ctx.lineTo(m.x - m.length * Math.cos(m.angle), m.y - m.length * Math.sin(m.angle));
+        ctx.lineTo(x2, y2);
         ctx.stroke();
 
-        m.x += m.speed * Math.cos(m.angle);
-        m.y += m.speed * Math.sin(m.angle);
+        // Đầu sao băng sáng
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(255,255,255,${m.alpha})`;
+        ctx.arc(m.x, m.y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
 
-        if (m.x > W + 100 || m.y > H + 100) {
-            meteors.splice(index, 1);
+        m.x += Math.cos(m.angle) * m.speed;
+        m.y += Math.sin(m.angle) * m.speed;
+        m.alpha -= 0.002;
+
+        if (m.x > W + 100 || m.y > H + 100 || m.alpha <= 0) {
+            meteors.splice(i, 1);
         }
     });
 
-    if (Math.random() < 0.05) {
+    if (Math.random() < 0.04) {
         meteors.push(createMeteor());
     }
 }
 
 function animate() {
-    drawStars();
+    ctx.fillStyle = "rgba(0,0,20,0.2)";
+    ctx.fillRect(0, 0, W, H);
+    drawBackgroundStars();
+    drawTextStars();
     drawMeteors();
     requestAnimationFrame(animate);
 }
 
+createBackgroundStars(150);
 createStarsFromText("Kieu Oanh");
 animate();
 
 window.addEventListener("resize", () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+    backgroundStars = [];
+    createBackgroundStars(150);
+    createStarsFromText("Kieu Oanh");
 });
 </script>
 </body>
