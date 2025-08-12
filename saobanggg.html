@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Sao băng - Kieu Oanh</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: black;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+<canvas id="starCanvas"></canvas>
+
+<script>
+const canvas = document.getElementById("starCanvas");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const W = canvas.width;
+const H = canvas.height;
+
+let stars = [];
+let meteors = [];
+
+function createStarsFromText(text) {
+    let tempCanvas = document.createElement("canvas");
+    let tempCtx = tempCanvas.getContext("2d");
+    tempCanvas.width = W;
+    tempCanvas.height = H;
+    tempCtx.fillStyle = "white";
+    tempCtx.font = "bold 150px Arial";
+    tempCtx.textAlign = "center";
+    tempCtx.textBaseline = "middle";
+    tempCtx.fillText(text, W/2, H/2);
+
+    let imageData = tempCtx.getImageData(0, 0, W, H).data;
+    for (let y = 0; y < H; y += 4) {
+        for (let x = 0; x < W; x += 4) {
+            let index = (y * W + x) * 4;
+            if (imageData[index + 3] > 128) {
+                stars.push({
+                    x: x,
+                    y: y,
+                    size: Math.random() * 1.5,
+                    brightness: Math.random()
+                });
+            }
+        }
+    }
+}
+
+function createMeteor() {
+    return {
+        x: Math.random() * W,
+        y: -20,
+        length: Math.random() * 80 + 50,
+        speed: Math.random() * 10 + 6,
+        angle: Math.PI / 4,
+        opacity: Math.random() * 0.5 + 0.5
+    };
+}
+
+function drawStars() {
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "white";
+    stars.forEach(s => {
+        ctx.globalAlpha = 0.5 + 0.5 * Math.sin(Date.now() / 300 + s.brightness * 10);
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+        ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+}
+
+function drawMeteors() {
+    meteors.forEach((m, index) => {
+        ctx.strokeStyle = `rgba(255,255,255,${m.opacity})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(m.x, m.y);
+        ctx.lineTo(m.x - m.length * Math.cos(m.angle), m.y - m.length * Math.sin(m.angle));
+        ctx.stroke();
+
+        m.x += m.speed * Math.cos(m.angle);
+        m.y += m.speed * Math.sin(m.angle);
+
+        if (m.x > W + 100 || m.y > H + 100) {
+            meteors.splice(index, 1);
+        }
+    });
+
+    if (Math.random() < 0.05) {
+        meteors.push(createMeteor());
+    }
+}
+
+function animate() {
+    drawStars();
+    drawMeteors();
+    requestAnimationFrame(animate);
+}
+
+createStarsFromText("Kieu Oanh");
+animate();
+
+window.addEventListener("resize", () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+});
+</script>
+</body>
+</html>
